@@ -5,7 +5,7 @@ export async function up(knex: Knex) {
         table.increments('id').primary();
         table.integer('week_day').notNullable(); // de 0 a 6, domingo a sabado
         table.integer('from').notNullable(); // de qual horario
-        table.integer('to').notNullable(); // ate qual
+        table.integer('to').notNullable(); // ate qual, os dados vao ser salvos em minutos para ficar mais facil de serem tratados ex: 8hrs = 480min
     
         // relacionamento com as classes/aulas
         table.integer('class_id')

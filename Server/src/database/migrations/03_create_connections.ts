@@ -14,7 +14,7 @@ export async function up(knex: Knex) {
 
         // quando que houve a conexao?
         table.timestamp('created_at')
-            .defaultTo('now()')
+            .defaultTo(knex.raw('CURRENT_TIMESTAMP')) // knex.raw para ele entender que é um texto do sqlite, essa é uma função para adicionar a data e hora atual
             .notNullable();
     })
 }

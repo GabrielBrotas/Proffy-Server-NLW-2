@@ -1,31 +1,16 @@
 import express from 'express';
-import db from './database/connection';
+import ClassesController from './controllers/ClassesController';
+import ConnectionsController from './controllers/ConnectionsController';
 
 const routes = express.Router();
+const classesControllers = new ClassesController();
+const connectionsController = new ConnectionsController()
+// classesControllers.create para usar o atributo create da classe
+routes.post('/classes', classesControllers.create)
+routes.get('/classes', classesControllers.index)
 
-routes.post('/classes', async (req, res) => {
-    const {name, avatar, whatsapp, bio, subject, cost, schedule} = req.body
-    
-    // inserir usuario na table users, vai retornar o id gerado dos usuarios inseridos na tabela, como só é possivel inserir um usuario por vez vai retornar o id dele em um array
-    // caso quisesse inserir mais de um usuario ao mesmo tempo era só usar um array no insert([{...},{...},...])
-    const insertedUsersId = await db('users').insert({
-        name, 
-        avatar,
-        whatsapp,
-        bio
-    })
+routes.post('/connections', connectionsController.create)
+routes.get('/connections', connectionsController.index)
 
-    // pegar o id do usuario que está no array
-    const user_id = insertedUsersId[0]
-    
-    await db('classes').insert({
-        subject,
-        cost,
-        user_id
-    })
-
-    return res.send()
-
-})
 
 export default routes
