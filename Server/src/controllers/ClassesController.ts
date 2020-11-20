@@ -21,39 +21,55 @@ export default class ClassesController {
         const subject = filters.subject as string;
         const week_day = filters.week_day as string;
         const time = filters.time as string;
-
+        let timeInMinutes:number;
+        
         // Caso o usuario nao informe nenhum dos campos..., essa rota só funciona se tiver algum parametro
-        if(!filters.week_day || !filters.subject || !filters.time) {
-            return res.status(400).json({
-                error: "Missing filters to search classes"
-            })
-        }
+        // if(!filters.week_day || !filters.subject || !filters.time) {
+        //     return res.status(400).json({
+        //         error: "Missing filters to search classes"
+        //     })
+        // }
 
         // informar para o typescript que o time vai vim como string
-        const timeInMinutes = convertHourToMinutes(time);
+        if(time) { timeInMinutes = convertHourToMinutes(time) }
 
-        const classes = await db('classes')
-            // Se existir...
+        try { 
+            var classes = await db('classes')
             .whereExists( function() {
-                // fazer uma query para a tabela schedule e ver se tem um horario disponivel ao que ele está buscando
-
-                // pegar todas os campos da tabela schedula
-                this.select('class_schedule.*')
+                if( timeInMinutes) {
+                    this.select('class_schedule.*')
                     .from('class_schedule')
-                    // whereRaw é para escrever em sql
-                    .whereRaw('`class_schedule`.`class_id` = `classes`.`id`') // procurar todos os class dentro de class_scheule, todos as class que tenham o class_id igual ao que estiver listando
-                    .whereRaw('`class_schedule`.`week_day` = ??', [Number(week_day)]) // as ?? é para colocar parametros, os valores do parametro vai dentro do array, nesse parametros vamos ver se a pessoa trabalha no dia da semana informado, ex: 0, 1 ,2 ... 6.
-                    .whereRaw('`class_schedule`.`from` <= ??', [timeInMinutes]) // ver se trabalha dentro do horario informado
-                    .whereRaw('`class_schedule`.`to` > ??', [timeInMinutes]) // ver se trabalha ate o horario informado
+                    .whereRaw('`class_schedule`.`class_id` = `classes`.`id`')
+                    .whereRaw('`class_schedule`.`from` <= ??', [Number(timeInMinutes)])
+                    .whereRaw('`class_schedule`.`to` > ??', [Number(timeInMinutes)])
+                } else {
+                    this.select('class_schedule.*').from('class_schedule')
+                }
             })
-            // pegar o dado onde o subject de classes é igual ao subject passado via query
-            .where('classes.subject', '=', subject)
-            // unir com a table 'users' onde o user_id da classe achado é igual ao id da tabela users
+            .whereExists( function() {
+                if(week_day) {
+                    this.select('class_schedule.*')
+                    .from('class_schedule')
+                    .whereRaw('`class_schedule`.`class_id` = `classes`.`id`')
+                    .whereRaw('`class_schedule`.`week_day` = ??', [Number(week_day)])
+                } else {
+                    this.select('class_schedule.*').from('class_schedule')
+                }
+            })
+            .where( function() {
+                if(subject) {
+                    this.where('classes.subject', '=', subject)
+                }
+            })
             .join('users', 'classes.user_id', '=', 'users.id')
-            // pegar todos os dados da tabela classes e da users
             .select(['classes.*', 'users.*'])
+
+            return res.json(classes)
+        } catch(err) {
+            console.log(err)
+            return res.json(err)
+        }
         
-        return res.json(classes);
     }
 
     // como o typescrip nao reconhece req e res a gnt tem que importar o modulo do express e definir os parametros como sendo eles

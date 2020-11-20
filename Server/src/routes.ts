@@ -4,7 +4,8 @@ import ConnectionsController from './controllers/ConnectionsController';
 
 const routes = express.Router();
 const classesControllers = new ClassesController();
-const connectionsController = new ConnectionsController()
+const connectionsController = new ConnectionsController();
+
 // classesControllers.create para usar o atributo create da classe
 routes.post('/classes', classesControllers.create)
 routes.get('/classes', classesControllers.index)
