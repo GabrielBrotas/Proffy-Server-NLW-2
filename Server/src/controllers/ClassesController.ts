@@ -22,13 +22,10 @@ export default class ClassesController {
         const week_day = filters.week_day as string;
         const time = filters.time as string;
         let timeInMinutes:number;
-        
-        // Caso o usuario nao informe nenhum dos campos..., essa rota só funciona se tiver algum parametro
-        // if(!filters.week_day || !filters.subject || !filters.time) {
-        //     return res.status(400).json({
-        //         error: "Missing filters to search classes"
-        //     })
-        // }
+
+        let classesFormated: Array<Object> = [];
+        let classSchedule: Array<Object> = [];
+        let teacherData: Object;
 
         // informar para o typescript que o time vai vim como string
         if(time) { timeInMinutes = convertHourToMinutes(time) }
@@ -62,9 +59,32 @@ export default class ClassesController {
                 }
             })
             .join('users', 'classes.user_id', '=', 'users.id')
-            .select(['classes.*', 'users.*'])
+            .select(['classes.*', 'users.*' ])
+            .join('class_schedule', 'classes.id', '=', 'class_schedule.class_id')
+            .select(['class_schedule.*' ])          
+            
+            classes.forEach( (classData, index) => {
+                
+                const {id, name, subject, bio, avatar, whatsapp, cost, user_id, week_day, from, to } = classData
 
-            return res.json(classes)
+                teacherData = {id, name, subject, bio, avatar, whatsapp, cost, user_id}
+
+                // se for o ultimo dado
+                if((classes.length - 1) === index) {
+                    classSchedule.push({week_day, from, to})
+                    classesFormated.push({...teacherData, classSchedule})  
+                } else {
+                    if(classData.class_id === classes[index + 1].class_id) {
+                        classSchedule.push({week_day, from ,to})
+                    } else {
+                        classSchedule.push({week_day, from ,to})
+                        classesFormated.push({...teacherData, classSchedule})
+                        classSchedule = [];
+                    }
+                }
+            })
+
+            return res.json(classesFormated)
         } catch(err) {
             console.log(err)
             return res.json(err)
