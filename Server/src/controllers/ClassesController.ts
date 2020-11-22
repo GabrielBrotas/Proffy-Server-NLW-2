@@ -131,6 +131,25 @@ export default class ClassesController {
                 }
             })
 
+            // Colocar todos os dias da semana no schedule
+            for (let i = 0; i <= 6; i++) {
+                if(classSchedule[i] === undefined) {
+                    classSchedule.splice(i, 0, {
+                        class_id: classSchedule[0].class_id,
+                        week_day: i,
+                        from: 0,
+                        to: 0,
+                    })
+                } else if (classSchedule[i].week_day !== i) {
+                    classSchedule.splice(i, 0, {
+                        class_id: classSchedule[0].class_id,
+                        week_day: i,
+                        from: 0,
+                        to: 0,
+                    })
+                }
+            }
+
             await trx('class_schedule').insert(classSchedule)
 
             // commit em todos os dados
@@ -141,7 +160,7 @@ export default class ClassesController {
         } catch (err) {
             // Caso dê erro na criação dos dados ele vai desfazer todas as transctions anteriores
             await trx.rollback();
-
+            console.log(err)
             return res.status(400).json({error: 'Unexpected error while creating new class'})
         }
     }
