@@ -1,8 +1,27 @@
 import express from 'express';
-import routes from './routes';
 import cors from 'cors'
+import session from 'express-session'
+import passport from 'passport'
+
+import routes from './routes';
+
+import authFunction from './configs/auth';
 
 const app = express();
+const auth = authFunction();
+
+// configs
+app.use(session({
+    secret: "RandomTextForSecurity",
+    cookie: {
+        maxAge: 3000000000000
+    },
+    resave: true,
+    saveUninitialized: false
+}))
+
+app.use(auth.initialize())
+app.use(passport.session())
 
 // * Tipos de Rotas HTTP
 /*

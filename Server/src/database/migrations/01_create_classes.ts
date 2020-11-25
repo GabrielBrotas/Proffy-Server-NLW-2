@@ -6,6 +6,7 @@ export async function up(knex: Knex) {
         table.increments('id').primary();
         table.string('subject').notNullable();
         table.decimal('cost').notNullable();
+        table.string('whatsapp').notNullable();
         
         // relacionamento de tabelas com quem vai ser o ministrante da aula
         table.integer('user_id')
