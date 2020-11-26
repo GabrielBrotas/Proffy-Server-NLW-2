@@ -1,10 +1,6 @@
 import { Request, Response} from 'express'
-import jwt from 'jwt-simple'
-import jwtConfig from '../configs/jwt-config'
-import bcrypt from 'bcryptjs'
 import db from '../database/connection';
 import convertHourToMinutes from '../utils/convertHourToMinutes';
-
 
 // Definir o formato deste objeto pra nao mostrar o erro de 'any' quando for criar a classesSchedule
 interface ScheduleItem {
@@ -13,16 +9,7 @@ interface ScheduleItem {
     to: string
 }
 
-interface UserProps {
-    id: number;
-    name: string;
-    email: string;
-    avatar: string;
-}
-
 export default class ClassesController {
-
-    // Métodos da classe
 
     // index retorna uma lista
     async index(req: Request, res: Response) {
@@ -99,69 +86,6 @@ export default class ClassesController {
         }        
     }
 
-    async createNewUser(req: Request, res: Response) {
-        const {name, email, password, confirmPassword, avatar} = req.body
-    
-        let errors: Array<Object> = [];
-
-        try {
-            const usersDB = await db('users')
-
-            usersDB.forEach( user => {
-                if(user.email === email) {
-                    errors.push({email: 'Email already exists'})
-                }
-                if(user.name === name) {
-                    errors.push({name: 'Name already exists'})
-                }
-            })
-
-            if(password !== confirmPassword) {
-                errors.push({password: 'Password does not match'})
-            }
-
-            if(errors.length > 0) {
-                return res.status(400).send({errors})
-            } else {
-                var salt = bcrypt.genSaltSync(10)
-                var hash = bcrypt.hashSync(password, salt)
-
-                await db('users').insert({name, email, password: hash, avatar})
-                return res.status(202).send({message: "user created with success"})
-            }
-            
-        } catch(err) {
-            return res.status(400).send({error: "something went wrong"})
-        }
-    }
-
-    async loginUser(req: Request, res: Response) {
-        const {email, password} = req.body
-
-        if(email && password) {
-
-            const users = await db('users').where('email', email)
-            const user = users[0]
-
-            if(user) {
-                bcrypt.compare(password, user.password, (err, match) => {
-                    if(match) {
-                        const payload = {id: user.id}
-                        const token = jwt.encode(payload, jwtConfig.jwtSecret)
-                        res.status(200).json({token})
-                    } else {
-                        res.status(404).json({error: "Invalid Password"})
-                    }
-                })
-            } else {
-                res.status(404).json({error: "User not found"})
-            }
-
-        } else {
-            res.status(404).json({error: "Something went wrong"})
-        }
-    }
-    
     // como o typescript nao reconhece req e res a gnt tem que importar o modulo do express e definir os parametros como sendo eles
     async create(req: Request, res: Response)  {
         const {name, avatar, whatsapp, bio, subject, cost, schedule} = req.body
