@@ -9,6 +9,20 @@ interface ScheduleItem {
     to: string
 }
 
+interface ClassFormat {
+    id: number;
+    subject: string;
+    cost: number;
+    whatsapp: string;
+    bio: string;
+    user_id: number;
+    name: string;
+    email: string;
+    avatar: any;
+    schedule: any;
+    class_id: number;
+}
+
 export default class ClassesController {
 
     // index retorna uma lista
@@ -18,12 +32,9 @@ export default class ClassesController {
         const subject = filters.subject as string;
         const week_day = filters.week_day as string;
         const time = filters.time as string;
-        let timeInMinutes:number;
+        let timeInMinutes:number;   
 
-        let classesFormated: Array<Object> = [];
-        let classSchedule: Array<Object> = [];
-        let teacherData: Object;
-
+        let formatedClassSchedule: Array<ClassFormat> = []
         // informar para o typescript que o time vai vim como string
         if(time) { timeInMinutes = convertHourToMinutes(time) }
 
@@ -59,58 +70,41 @@ export default class ClassesController {
             .select(['classes.*', 'users.*' ])
             .join('class_schedule', 'classes.id', '=', 'class_schedule.class_id')
             .select(['class_schedule.*' ])          
-            
-            classes.forEach( (classData, index) => {
-                
-                const {id, name, subject, bio, avatar, whatsapp, cost, user_id, week_day, from, to } = classData
+            .orderBy('class_id')
 
-                teacherData = {id, name, subject, bio, avatar, whatsapp, cost, user_id}
-
-                // se for o ultimo dado
-                if((classes.length - 1) === index) {
-                    classSchedule.push({week_day, from, to})
-                    classesFormated.push({...teacherData, classSchedule})  
-                } else {
-                    if(classData.class_id === classes[index + 1].class_id) {
-                        classSchedule.push({week_day, from ,to})
-                    } else {
-                        classSchedule.push({week_day, from ,to})
-                        classesFormated.push({...teacherData, classSchedule})
-                        classSchedule = [];
-                    }
-                }
+            classes.forEach( Class => {
+                const {id, user_id, subject, cost, whatsapp, bio, name, email, avatar, class_id} = Class
+                formatedClassSchedule[Class.class_id] = {id, class_id, user_id, subject, cost, whatsapp, bio, name,  email, avatar, schedule: []}
             })
-            return res.json(classesFormated)
+
+            classes.forEach( Class => {
+                const {week_day, from, to} = Class
+                formatedClassSchedule[Class.class_id].schedule.push({week_day, from, to});
+            })
+
+            formatedClassSchedule = formatedClassSchedule.filter( nullClass => nullClass !== null)
+    
+            return res.json(formatedClassSchedule)
         } catch(err) {
+            console.log(err)
             return res.json(err)
         }        
     }
 
     // como o typescript nao reconhece req e res a gnt tem que importar o modulo do express e definir os parametros como sendo eles
     async create(req: Request, res: Response)  {
-        const {name, avatar, whatsapp, bio, subject, cost, schedule} = req.body
+        const {user_id, subject, cost, whatsapp, bio, schedule} = req.body
     
         // Normalmente o codigo vai adicionar o users, criar a classe e depois criar o schedule, mas, caso ocorra erro na criação do schedule os outros dados já terão sido criados, então, vamos usar o db.transactions para armazenar todos os dados e no final da um commit geral para criar tudo de vez, caso de erro nenhum dos bancos será adicionado
         const trx = await db.transaction();
 
         try {
-            // inserir usuario na table users, vai retornar o id gerado dos usuarios inseridos na tabela, como só é possivel inserir um usuario por vez vai retornar o id dele em um array
-            // caso quisesse inserir mais de um usuario ao mesmo tempo era só usar um array no insert([{...},{...},...])
-            // o trx ta substituindo o db('users') para guardar os dados na transaction e executar todas as alterações ao mesmo tempo   
-            const insertedUsersId = await trx('users').insert({
-                name, 
-                avatar,
-                whatsapp,
-                bio
-            })
-
-            // pegar o id do usuario que está no array
-            const user_id = insertedUsersId[0]
-            
             const insertedClassesId = await trx('classes').insert({
+                user_id,
                 subject,
                 cost,
-                user_id
+                whatsapp,
+                bio,
             })
 
             const class_id = insertedClassesId[0]
@@ -125,38 +119,17 @@ export default class ClassesController {
                 }
             })
 
-            // Colocar todos os dias da semana no schedule
-            for (let i = 0; i <= 6; i++) {
-                let scheduleHasWeekDay = false;
-                if(classSchedule[i] === undefined || classSchedule[i].week_day !== i) {
-                    classSchedule.forEach( (schedule: ScheduleItem) => {
-                        if(schedule.week_day === i) {
-                            scheduleHasWeekDay = true;
-                        }
-                    })
-                if(!scheduleHasWeekDay) {
-                    classSchedule.splice(i, 0, {
-                        class_id: classSchedule[0].class_id,
-                        week_day: i,
-                        from: 0,
-                        to: 0,
-                    })
-                }
-                }
-            }
-
-            await trx('class_schedule').insert(classSchedule)
+            await trx('class_schedule').insert(classSchedule);
 
             // commit em todos os dados
-            await trx.commit()
+            await trx.commit();
 
             return res.status(201).send();
 
         } catch (err) {
             // Caso dê erro na criação dos dados ele vai desfazer todas as transctions anteriores
             await trx.rollback();
-            console.log(err)
-            return res.status(400).json({error: 'Unexpected error while creating new class'})
+            return res.status(400).json({error: 'Unexpected error while creating new class'});
         }
     }
 }

@@ -13,7 +13,7 @@ export async function up(knex: Knex) {
         table.string('name').notNullable();
         table.string('email').notNullable();
         table.string('password').notNullable();
-        table.string('avatar').notNullable();
+        table.string('avatar')
     })
 }
 

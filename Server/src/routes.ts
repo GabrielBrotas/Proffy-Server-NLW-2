@@ -8,7 +8,6 @@ const usersControllers = new UsersController();
 const classesControllers = new ClassesController();
 const connectionsController = new ConnectionsController();
 
-// routes.get('/user', usersControllers.getUserData)
 routes.post('/user', usersControllers.createNewUser);
 routes.post('/login', usersControllers.loginUser);
 routes.post('/classes', classesControllers.create);
@@ -16,6 +15,5 @@ routes.get('/classes', classesControllers.index);
 
 routes.post('/connections', connectionsController.create)
 routes.get('/connections', connectionsController.index)
-
 
 export default routes

@@ -33,8 +33,16 @@ export default class UsersController {
                 var salt = bcrypt.genSaltSync(10)
                 var hash = bcrypt.hashSync(password, salt)
 
-                await db('users').insert({name, email, password: hash, avatar})
-                return res.status(202).send({message: "user created with success"})
+                const userId = await db('users').insert({name, email, password: hash, avatar})
+                
+                const payload = {user: {
+                    userId: userId[0],
+                    name,
+                    avatar, 
+                    email
+                }}
+                const token = jwt.encode(payload, jwtConfig.jwtSecret)
+                return res.status(200).json({token})
             }
             
         } catch(err) {
@@ -59,17 +67,17 @@ export default class UsersController {
                             email: user.email,
                         }}
                         const token = jwt.encode(payload, jwtConfig.jwtSecret)
-                        res.status(200).json({token})
+                        return res.status(200).json({token})
                     } else {
-                        res.status(404).json({error: "Invalid Password"})
+                        return res.status(404).json({error: "Invalid Password"})
                     }
                 })
             } else {
-                res.status(404).json({error: "User not found"})
+                return res.status(404).json({error: "User not found"})
             }
 
         } else {
-            res.status(404).json({error: "Something went wrong"})
+            return res.status(404).json({error: "Something went wrong"})
         }
     }
 }
