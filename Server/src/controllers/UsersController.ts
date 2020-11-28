@@ -3,32 +3,38 @@ import db from '../database/connection'
 import bcrypt from 'bcryptjs'
 import jwt from 'jwt-simple'
 import jwtConfig from "../configs/jwt-config";
+import { userDataProps, validateRegisterUser } from "../utils/validator";
+import isEmpty from "../utils/ObjectIsEmpty";
 
 export default class UsersController {
 
     async createNewUser(req: Request, res: Response) {
         const {name, email, password, confirmPassword, avatar} = req.body
     
-        let errors: Array<Object> = [];
+
+        const userInfo = {name, email, password, confirmPassword, avatar};
+
+        let errors: userDataProps = validateRegisterUser(userInfo)
 
         try {
+    
             const usersDB = await db('users')
 
             usersDB.forEach( user => {
                 if(user.email === email) {
-                    errors.push({email: 'Email already exists'})
+                    errors.email = "Email already exists"
                 }
                 if(user.name === name) {
-                    errors.push({name: 'Name already exists'})
+                    errors.name= "Name already exists"
                 }
             })
 
             if(password !== confirmPassword) {
-                errors.push({password: 'Password does not match'})
+                errors.password = "Password does not match"
             }
 
-            if(errors.length > 0) {
-                return res.status(400).send({errors})
+            if(!isEmpty(errors)) {
+                return res.status(400).send(errors)
             } else {
                 var salt = bcrypt.genSaltSync(10)
                 var hash = bcrypt.hashSync(password, salt)
@@ -44,8 +50,9 @@ export default class UsersController {
                 const token = jwt.encode(payload, jwtConfig.jwtSecret)
                 return res.status(200).json({token})
             }
-            
+
         } catch(err) {
+
             return res.status(400).send({error: "something went wrong"})
         }
     }
@@ -69,15 +76,15 @@ export default class UsersController {
                         const token = jwt.encode(payload, jwtConfig.jwtSecret)
                         return res.status(200).json({token})
                     } else {
-                        return res.status(404).json({error: "Invalid Password"})
+                        return res.status(400).send({password: "Invalid Password"})
                     }
                 })
             } else {
-                return res.status(404).json({error: "User not found"})
+                return res.status(400).send({email: "User not found"})
             }
 
         } else {
-            return res.status(404).json({error: "Something went wrong"})
+            return res.status(400).send({error: "Something went wrong"})
         }
     }
 }
