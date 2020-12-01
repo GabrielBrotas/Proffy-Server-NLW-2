@@ -2,6 +2,7 @@ export interface userDataProps {
     name?: string;
     email?: string;
     password?: string;
+    from?: string;
 }
 
 export function validateRegisterUser(userData: userDataProps) {

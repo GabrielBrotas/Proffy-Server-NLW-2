@@ -9,6 +9,7 @@ const classesControllers = new ClassesController();
 const connectionsController = new ConnectionsController();
 
 routes.post('/user', usersControllers.createNewUser);
+routes.post('/checkUser', usersControllers.checkIfNameAndEmailExists)
 routes.post('/login', usersControllers.loginUser);
 routes.post('/classes', classesControllers.create);
 routes.get('/classes', classesControllers.index);

@@ -8,9 +8,39 @@ import isEmpty from "../utils/ObjectIsEmpty";
 
 export default class UsersController {
 
+    async loginUser(req: Request, res: Response) {
+        const {email, password} = req.body
+
+        if(email && password) {
+            const users = await db('users').where('email', email)
+            const user = users[0]
+    
+            if(user) {
+                bcrypt.compare(password, user.password, (err, match) => {
+                    if(match) {
+                        const payload = {user: {
+                            userId: user.id,
+                            name: user.name,
+                            avatar: user.avatar, 
+                            email: user.email,
+                        }}
+                        const token = jwt.encode(payload, jwtConfig.jwtSecret)
+                        return res.status(200).json({token})
+                    } else {
+                        return res.status(400).send({password: "Invalid Password"})
+                    }
+                })
+            } else {
+                return res.status(400).send({email: "User not found"})
+            }
+
+        } else {
+            return res.status(400).send({error: "Something went wrong"})
+        }
+    }
+
     async createNewUser(req: Request, res: Response) {
         const {name, email, password, confirmPassword, avatar} = req.body
-    
 
         const userInfo = {name, email, password, confirmPassword, avatar};
 
@@ -56,35 +86,37 @@ export default class UsersController {
             return res.status(400).send({error: "something went wrong"})
         }
     }
-
-    async loginUser(req: Request, res: Response) {
-        const {email, password} = req.body
-
-        if(email && password) {
-            const users = await db('users').where('email', email)
-            const user = users[0]
     
-            if(user) {
-                bcrypt.compare(password, user.password, (err, match) => {
-                    if(match) {
-                        const payload = {user: {
-                            userId: user.id,
-                            name: user.name,
-                            avatar: user.avatar, 
-                            email: user.email,
-                        }}
-                        const token = jwt.encode(payload, jwtConfig.jwtSecret)
-                        return res.status(200).json({token})
-                    } else {
-                        return res.status(400).send({password: "Invalid Password"})
-                    }
-                })
-            } else {
-                return res.status(400).send({email: "User not found"})
-            }
+    async checkIfNameAndEmailExists(req: Request, res: Response) {
+        const {name, email} = req.body
+        
+        const usersDB = await db('users')
 
-        } else {
-            return res.status(400).send({error: "Something went wrong"})
+        let errors: userDataProps = {}
+
+        if(name.trim() === "" || name === undefined || name === null) {
+            errors.name = "Invalid name"
         }
+        
+        if(email === "" || email === undefined || email === null) {
+            errors.email = "Invalid email"
+        }
+
+        usersDB.forEach(user => {
+            if(user.name === name) {
+                errors.name = "Username already exists"
+            }
+            if(user.email === email) {
+                errors.email = "Email already exists"
+            }
+        })
+
+        if(!isEmpty(errors)) {
+            errors.from = "register"
+            return res.status(400).send(errors)           
+        } else {
+            return res.status(200).send()
+        }
+
     }
 }
